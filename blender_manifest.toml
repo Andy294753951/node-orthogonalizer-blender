@@ -1,15 +1,14 @@
 schema_version = "1.0.0"
 id = "node_orthogonalizer"
 name = "Node Orthogonalizer"
-version = "2.1.1"
+version = "2.1.2"
 type = "add-on"
 blender_version_min = "5.2.0"
 license = ["SPDX:GPL-3.0-or-later"]
 maintainer = "Andy294753951"
+tags = ["Node"]
 
 # 注意：末尾的 routes 后面已经去掉了句号
 tagline = "Automatically turns node links into 90-degree routes"
 
-description = "Node Orthogonalizer creates right-angle routes and organizes Shader, Compositor, and Geometry node trees with frame-safe tree and compact layouts."
-url = "https://github.com/Andy294753951/node-orthogonalizer-blender"
-
+website = "https://github.com/Andy294753951/node-orthogonalizer-blender"

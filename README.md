@@ -32,7 +32,7 @@ Node Orthogonalizer（节点正交化器）是一款面向 Blender 5.2 LTS 的�
 
 ## Installation
 
-1. Download `node-orthogonalizer-blender-5.2-v2.1.1.zip` from the latest GitHub Release.
+1. Download `node-orthogonalizer-blender-5.2-v2.1.2.zip` from the latest GitHub Release.
 2. In Blender 5.2, open **Edit > Preferences > Extensions**.
 3. Open the menu in the upper-right corner and choose **Install from Disk**.
 4. Select the downloaded ZIP without extracting it.
@@ -66,7 +66,7 @@ layout tools rearrange them. Simple unframed trees can be organized as a whole.
 
 ## Compatibility and validation
 
-Version 2.1.1 was tested with Blender 5.2.0 LTS in:
+Version 2.1.2 was tested with Blender 5.2.0 LTS in:
 
 - Shader nodes, including Principled BSDF and MMD material groups.
 - Compositor node trees.
@@ -91,6 +91,14 @@ The original `.blend` test files were not overwritten.
 ![Compositor complex scene](docs/images/compositor-complex-scene.png)
 
 ## Changelog
+
+### 2.1.2
+
+- Prepared the package metadata and lifecycle behavior for Blender Extensions review.
+- Removed the NumPy dependency and now use Python's standard math library only.
+- Registered internal Blender RNA properties only while the extension is enabled.
+- Added collision-safe property names and complete cleanup on unregister.
+- Added the official `Node` extension tag and corrected the manifest website field.
 
 ### 2.1.1
 

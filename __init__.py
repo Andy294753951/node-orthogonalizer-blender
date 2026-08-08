@@ -12,18 +12,19 @@
 # not, see <https://www.gnu.org/licenses/>.                                                      #
 ##################################################################################################
 
+from collections import defaultdict, deque, namedtuple
+from math import cos, pi, sin
 import platform
 import time
-import numpy as np
+
 import bpy
-from collections import defaultdict, deque, namedtuple
 
 OS = platform.system()
 bl_info = {
     "name": "Node Orthogonalizer",
     "description": "Automatically routes Blender node links with clean right-angle turns",
     "author": "Andy294753951 (Blender 5.2 rewrite), Kai Christensen (original)",
-    "version": (2, 1, 1),
+    "version": (2, 1, 2),
     "blender": (5, 2, 0),
     "doc_url": "https://github.com/Andy294753951/node-orthogonalizer-blender",
     "support": "COMMUNITY",
@@ -38,12 +39,6 @@ Point = namedtuple('Point', ['x', 'y'])
 # links attach to the box centre. Treating location as the socket centre was
 # the source of the small diagonal segments visible in Blender 5.x.
 REROUTE_SIZE = 10.0
-
-bpy.types.Node.is_reroute = bpy.props.BoolProperty(name="Is Reroute Node", default=False)
-bpy.types.Node.x_lock = bpy.props.BoolProperty(name="X Lock", default=False)
-bpy.types.Node.y_lock = bpy.props.BoolProperty(name="Y Lock", default=False)
-bpy.types.NodeSocket.center_offset = bpy.props.FloatProperty(name="Center Offset", default=0)
-
 
 def get_ui_scaling(context):
     """Return Blender's effective UI scale, including Windows display scale."""
@@ -123,10 +118,10 @@ def assign_output_offsets(node, gap):
     if n_out > 1:
         spread = gap*(n_out-1)
         start = -1*spread/2
-        stop = spread/2
-        offsets = np.linspace(start=start, stop=stop, num=n_out)
+        step = spread/(n_out-1)
+        offsets = (start + (step * index) for index in range(n_out))
         for offset, output in zip(offsets, outputs):
-            output.center_offset = offset
+            output.orthogonalizer_center_offset = offset
 
 
 def get_reroute_center(node, context):
@@ -389,25 +384,25 @@ def get_socket_dict(node, context):
 
         visible_inputs = [i for i in inputs if not is_hidden(i)]
         n_in = len(visible_inputs)
-        slice_angle = np.pi/(n_in+1)
+        slice_angle = pi/(n_in+1)
         for idx, i in enumerate(visible_inputs):
 
             slice = idx+1
-            start = 3*np.pi/2
-            x = input_circle_center.x + (np.cos(start-(slice*slice_angle))*radius)
-            y = input_circle_center.y + (np.sin(start-(slice*slice_angle))*radius)
+            start = 3*pi/2
+            x = input_circle_center.x + (cos(start-(slice*slice_angle))*radius)
+            y = input_circle_center.y + (sin(start-(slice*slice_angle))*radius)
 
             socket_dict['input'][i.identifier] = Socket(i, 'input', x, y)
 
         visible_outputs = [o for o in outputs if not is_hidden(o)]
         n_out = len(visible_outputs)
-        slice_angle = np.pi/(n_out+1)
+        slice_angle = pi/(n_out+1)
         for idx, o in enumerate(visible_outputs):
 
             slice = idx+1
-            start = np.pi/2
-            x = output_circle_center.x + (np.cos(start-(slice*slice_angle))*radius)
-            y = output_circle_center.y + (np.sin(start-(slice*slice_angle))*radius)
+            start = pi/2
+            x = output_circle_center.x + (cos(start-(slice*slice_angle))*radius)
+            y = output_circle_center.y + (sin(start-(slice*slice_angle))*radius)
 
             socket_dict['output'][o.identifier] = Socket(o, 'output', x, y)
 
@@ -445,7 +440,7 @@ def _nudge_existing_reroutes(valid_nodes, socket_dict, context, nudge_limit):
     moved_nodes = set()
 
     for root_node in valid_nodes:
-        if not root_node.is_reroute:
+        if not root_node.orthogonalizer_is_reroute:
             continue
 
         targets = []
@@ -464,9 +459,10 @@ def _nudge_existing_reroutes(valid_nodes, socket_dict, context, nudge_limit):
 
         center = get_reroute_center(root_node, context)
         non_reroute_targets = [
-            target for target in targets if not target.socket.node.is_reroute
+            target for target in targets
+            if not target.socket.node.orthogonalizer_is_reroute
         ]
-        if non_reroute_targets and not root_node.y_lock:
+        if non_reroute_targets and not root_node.orthogonalizer_y_lock:
             closest = min(
                 non_reroute_targets,
                 key=lambda target: (
@@ -475,12 +471,13 @@ def _nudge_existing_reroutes(valid_nodes, socket_dict, context, nudge_limit):
             )
             if abs(center.y - closest.y) < nudge_limit:
                 align_reroute_center(root_node, context, y=closest.y)
-                root_node.y_lock = True
+                root_node.orthogonalizer_y_lock = True
                 moved_nodes.add(root_node.as_pointer())
                 center = get_reroute_center(root_node, context)
 
         reroute_targets = [
-            target for target in targets if target.socket.node.is_reroute
+            target for target in targets
+            if target.socket.node.orthogonalizer_is_reroute
         ]
         reroute_targets.sort(
             key=lambda target: (
@@ -499,21 +496,24 @@ def _nudge_existing_reroutes(valid_nodes, socket_dict, context, nudge_limit):
             for axis, distance in axes:
                 if distance >= nudge_limit:
                     continue
-                if axis == 'x' and not root_node.x_lock:
+                if axis == 'x' and not root_node.orthogonalizer_x_lock:
                     align_reroute_center(root_node, context, x=target_center.x)
-                    root_node.x_lock = True
-                    target_node.x_lock = True
-                elif axis == 'y' and not root_node.y_lock:
+                    root_node.orthogonalizer_x_lock = True
+                    target_node.orthogonalizer_x_lock = True
+                elif axis == 'y' and not root_node.orthogonalizer_y_lock:
                     align_reroute_center(root_node, context, y=target_center.y)
-                    root_node.y_lock = True
-                    target_node.y_lock = True
+                    root_node.orthogonalizer_y_lock = True
+                    target_node.orthogonalizer_y_lock = True
                 else:
                     continue
                 moved_nodes.add(root_node.as_pointer())
                 center = get_reroute_center(root_node, context)
                 break
 
-            if root_node.x_lock and root_node.y_lock:
+            if (
+                root_node.orthogonalizer_x_lock
+                and root_node.orthogonalizer_y_lock
+            ):
                 break
 
     return len(moved_nodes)
@@ -532,9 +532,9 @@ def orthogonalize_tree(tree, context, auto_all, tolerance, nudge_limit, noodle_m
         return None
 
     for node in original_nodes:
-        node.is_reroute = node.bl_idname == 'NodeReroute'
-        node.x_lock = not node.is_reroute
-        node.y_lock = not node.is_reroute
+        node.orthogonalizer_is_reroute = node.bl_idname == 'NodeReroute'
+        node.orthogonalizer_x_lock = not node.orthogonalizer_is_reroute
+        node.orthogonalizer_y_lock = not node.orthogonalizer_is_reroute
         assign_output_offsets(node, noodle_margin)
 
     socket_dict = {
@@ -583,15 +583,15 @@ def orthogonalize_tree(tree, context, auto_all, tolerance, nudge_limit, noodle_m
         target_socket = link.to_socket
         source_x, source_y = source_info.x, source_info.y
         target_x, target_y = target_info.x, target_info.y
-        source_is_reroute = source_node.is_reroute
-        target_is_reroute = target_node.is_reroute
+        source_is_reroute = source_node.orthogonalizer_is_reroute
+        target_is_reroute = target_node.orthogonalizer_is_reroute
 
         links.remove(link)
 
         if not source_is_reroute and not target_is_reroute:
             middle_x = (
                 ((source_x + target_x) / 2.0)
-                + source_socket.center_offset
+                + source_socket.orthogonalizer_center_offset
             )
             first = nodes.new('NodeReroute')
             set_reroute_center(first, middle_x, source_y, context)
@@ -1594,6 +1594,23 @@ def _auto_square_timer():
 def register():
     global _auto_timer_running, _auto_state
 
+    bpy.types.Node.orthogonalizer_is_reroute = bpy.props.BoolProperty(
+        name="Orthogonalizer Reroute",
+        default=False,
+    )
+    bpy.types.Node.orthogonalizer_x_lock = bpy.props.BoolProperty(
+        name="Orthogonalizer X Lock",
+        default=False,
+    )
+    bpy.types.Node.orthogonalizer_y_lock = bpy.props.BoolProperty(
+        name="Orthogonalizer Y Lock",
+        default=False,
+    )
+    bpy.types.NodeSocket.orthogonalizer_center_offset = bpy.props.FloatProperty(
+        name="Orthogonalizer Center Offset",
+        default=0.0,
+    )
+
     bpy.utils.register_class(SquareNoodlesPreferences)
     bpy.utils.register_class(NODE_OT_orthogonalize)
     bpy.utils.register_class(NODE_OT_tree_layout)
@@ -1645,6 +1662,11 @@ def unregister():
     bpy.utils.unregister_class(NODE_OT_tree_layout)
     bpy.utils.unregister_class(NODE_OT_orthogonalize)
     bpy.utils.unregister_class(SquareNoodlesPreferences)
+
+    del bpy.types.NodeSocket.orthogonalizer_center_offset
+    del bpy.types.Node.orthogonalizer_y_lock
+    del bpy.types.Node.orthogonalizer_x_lock
+    del bpy.types.Node.orthogonalizer_is_reroute
 
 
 if __name__ == '__main__':
