@@ -59,6 +59,20 @@ Version 2.0.0 was tested in Blender 5.2.0 LTS with:
 
 The complex automatic test produced 14 reroute nodes and 0 non-orthogonal link segments.
 
+## Screenshots
+
+### Shader node routing
+
+![Shader node routing](docs/images/shader-node-routing.png)
+
+### Geometry Nodes complex scene
+
+![Geometry Nodes complex scene](docs/images/geometry-nodes-complex-scene.png)
+
+### Compositor complex scene
+
+![Compositor complex scene](docs/images/compositor-complex-scene.png)
+
 ## Changelog
 
 ### 2.0.0
