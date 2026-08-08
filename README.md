@@ -1,63 +1,80 @@
 # Node Orthogonalizer for Blender 5.2
 
-> Automatically turns Blender node links into clean, exact right-angle routes.
+> Automatically turns Blender node links into clean, exact right-angle routes and organizes complex node trees.
 
-Node Orthogonalizer is a maintained Blender add-on for organizing node links in Shader Editor, Compositor, Geometry Nodes, and other node-based editors. It adds reroute nodes where needed so connections remain horizontal, vertical, and easy to read.
+Node Orthogonalizer is a maintained Blender 5.2 extension for Shader Editor,
+Compositor, Geometry Nodes, and nested node groups. It creates horizontal and
+vertical reroute paths, and includes manual tools for arranging selected nodes
+as a readable dependency tree.
 
 ## 中文简介
 
-这是一个面向 Blender 5.2 的节点连线整理插件。它可以自动把着色器、合成器和几何节点中的连线整理成标准 90° 直角线路，适合复杂材质、MMD 模型材质和 Geometry Nodes 工程。
+Node Orthogonalizer（节点正交化器）是一款面向 Blender 5.2 LTS 的节点整理
+扩展。它可以自动将着色器、合成器和几何节点的连线整理为精确的 90° 路线，
+也可以按树状结构或距离重新排列选中的节点。
 
-当前维护版重点修复了 Blender 5.2 的节点插口坐标变化，并对 Bake、合成器节点、Principled BSDF、Mapping、Noise、材质输出和 MMDShaderDev 等布局进行了适配。
+本版本支持进入节点组内部操作，兼容 Frame 框架、组输入/组输出、动态 Bake
+插口、MMD 材质节点和大型合成器节点树，并针对复杂预设的卡顿问题进行了优化。
 
 ## Features
 
 - Automatic orthogonal routing after nodes or links change.
 - Manual command from `F3`: **Node Orthogonalize**.
 - Default shortcut: `Shift + ,`.
-- Works in Shader Editor, Compositor, Geometry Nodes, and other node editors.
-- Supports Blender 5.2 dynamic Geometry Nodes Bake sockets.
-- Keeps existing reroute nodes aligned and adds new reroutes only where required.
-- Preferences for automatic mode, delay, selected/all-node processing, tolerance, reroute nudging, and noodle spacing.
+- Exact horizontal and vertical reroute alignment in Blender 5.2.
+- Shader Editor, Compositor, Geometry Nodes, and nested node-group support.
+- Dynamic Geometry Nodes Bake socket support.
+- Frame-safe processing that preserves node parenting, data, sockets, and links.
+- Debounced automatic processing for better performance on large node groups.
+- **Tree Layout (Selected)** for left-to-right dependency columns.
+- **Compact Selected by Distance** for shorter links.
+- **Optimize Group Input / Output** for cleaner group interfaces.
 
 ## Installation
 
-1. Download the release ZIP from GitHub, or download this repository as a ZIP.
-2. In Blender, open **Edit > Preferences > Add-ons**.
-3. Click **Install**, then select `node_orthogonalizer.py`.
-4. Enable **Node Orthogonalizer**.
-5. Restart Blender after replacing an older installed copy so Blender unloads the previous module.
-
-The ZIP release contains the entry file at its root, so it can be installed directly from Blender's Add-ons panel.
+1. Download `node-orthogonalizer-blender-5.2-v2.1.1.zip` from the latest GitHub Release.
+2. In Blender 5.2, open **Edit > Preferences > Extensions**.
+3. Open the menu in the upper-right corner and choose **Install from Disk**.
+4. Select the downloaded ZIP without extracting it.
+5. Enable **Node Orthogonalizer**, then restart Blender if replacing an older version.
 
 ## Usage
 
-Automatic routing is enabled by default. After moving nodes or changing links, the add-on waits briefly for the layout to settle and then processes the active node tree.
+Automatic routing is enabled by default. After moving nodes or changing links,
+the extension waits briefly for the node editor to settle and then processes the
+active node tree.
 
-For a one-time operation, select the relevant nodes and use **F3 > Node Orthogonalize** or press `Shift + ,`. Press `F9` immediately afterward to adjust the operator settings.
+For manual routing, select the relevant nodes and use **F3 > Node Orthogonalize**
+or press `Shift + ,`.
 
-Automatic behavior can be changed under **Edit > Preferences > Add-ons > Node Orthogonalizer**:
+### Layout panel
 
-- **Automatic Orthogonalization**: enable or disable the watcher.
-- **Automatic Delay**: wait time after a node-tree change.
-- **Process All Linked Nodes**: process the complete active tree or only selected nodes.
+1. Move the mouse over the node editor and press `N`.
+2. Open **Orthogonalizer > Node Orthogonalizer** on the right-hand sidebar.
+3. Select connected nodes or select a Frame containing the nodes.
+4. Choose one of the layout tools:
+   - **Tree Layout (Selected)**
+   - **Compact Selected by Distance**
+   - **Optimize Group Input / Output**
+   - **Create 90-Degree Routes**
 
-The manual operator settings are:
+The `N` key affects the editor under the mouse cursor. If the cursor is over the
+3D Viewport, Blender opens the 3D Viewport sidebar instead of the node-editor panel.
 
-- **Tolerance**: ignore links that are already close to horizontal or vertical.
-- **Nudge Limit**: maximum movement allowed for an existing reroute node.
-- **Noodle Margin**: spacing used when several outputs share a route.
+For safety, complex framed presets require a node or Frame selection before the
+layout tools rearrange them. Simple unframed trees can be organized as a whole.
 
-## Blender 5.2 support
+## Compatibility and validation
 
-Version 2.0.0 was tested in Blender 5.2.0 LTS with:
+Version 2.1.1 was tested with Blender 5.2.0 LTS in:
 
-- Shader nodes, including Principled BSDF, Mapping, Noise, Material Output, and MMDShaderDev groups.
-- Compositor nodes with Blender 5.2's compositor tree API.
-- Geometry Nodes with dynamic Bake sockets and Domain Size.
-- A complex Geometry Nodes test containing geometry, value, and vector Bake data.
+- Shader nodes, including Principled BSDF and MMD material groups.
+- Compositor node trees.
+- Geometry Nodes, including dynamic Bake sockets and Domain Size.
+- Nested node groups and Frame-parented nodes.
+- A production-style preset containing 133 nodes, 167 links, 61 reroutes, and 8 frames.
 
-The complex automatic test produced 14 reroute nodes and 0 non-orthogonal link segments.
+The original `.blend` test files were not overwritten.
 
 ## Screenshots
 
@@ -75,23 +92,32 @@ The complex automatic test produced 14 reroute nodes and 0 non-orthogonal link s
 
 ## Changelog
 
+### 2.1.1
+
+- Added an **Orthogonalizer** tab to the node editor's `N` sidebar.
+- Kept the panel visible in every Node Editor, including before a node tree is active.
+- Clarified that the mouse must be over the Node Editor when pressing `N`.
+
+### 2.1.0
+
+- Added tree, compact-distance, and Group Input/Output layout tools.
+- Added selected-node, Frame, and nested node-group processing.
+- Preserved Frame parenting and existing reroute constraints during layout.
+- Reduced automatic-mode feedback loops and slowdowns on complex node groups.
+- Improved exact 90° alignment across Shader, Compositor, and Geometry Nodes.
+
 ### 2.0.0
 
-- Renamed the public add-on to **Node Orthogonalizer**.
-- Fixed Blender 5.2 Geometry Nodes Bake output-socket positioning.
-- Added support for dynamic Bake data rows while preserving exact input/output alignment.
-- Revalidated automatic routing in a complex Geometry Nodes tree.
-
-### 1.4.2
-
-- Made the automatic watcher persistent when opening or switching `.blend` files.
-
-### 1.4.1
-
-- Added Blender 5.2 compositor socket-layout handling.
+- Renamed the maintained add-on to **Node Orthogonalizer**.
+- Added Blender 5.2 socket-layout handling and dynamic Bake support.
 
 ## Credits and license
 
-This project is a maintained rework of the older open-source **Square Noodles** add-on. Original upstream credit: Kai Christensen, [mkaic/square-noodles](https://github.com/mkaic/square-noodles).
+This project is a Blender 5.2 modernization and expansion of the open-source
+**Square Noodles** add-on by Kai Christensen:
+[mkaic/square-noodles](https://github.com/mkaic/square-noodles).
 
-This maintained version is distributed under the GNU General Public License v3.0. See [`LICENSE`](LICENSE).
+Blender 5.2 rewrite, automatic mode, performance work, nested-group support,
+exact reroute alignment, and layout tools are maintained by Andy294753951.
+
+Distributed under the GNU General Public License v3.0 or later. See [`LICENSE`](LICENSE).
